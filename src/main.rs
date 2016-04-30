@@ -15,17 +15,6 @@ mod xcode;
 use std::env;
 use std::fs;
 
-static TESTS_PRELUDE: &'static str = r##"
-#[macro_use]
-extern crate objc;
-
-pub use objc::*;
-use objc::runtime::*;
-
-#[path = "../src/test_utils.rs"]
-mod test_utils;
-"##;
-
 fn main() {
     let crate_dir = env::current_dir().unwrap();
 
@@ -33,8 +22,7 @@ fn main() {
     fs::create_dir_all(&build_dir).unwrap();
 
     let src_dir = crate_dir.join("src");
-    let prelude = TESTS_PRELUDE.to_owned();
-    tests::create_test_module(&build_dir, &src_dir, prelude).unwrap();
+    tests::create_test_module(&build_dir, &src_dir).unwrap();
 
     cargo::create_config(&build_dir, &crate_dir).unwrap();
     assert!(cargo::build(&build_dir).unwrap() == true);

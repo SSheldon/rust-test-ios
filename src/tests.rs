@@ -80,8 +80,7 @@ fn read_file(path: &Path) -> IoResult<String> {
     Ok(buf)
 }
 
-pub fn create_test_module(dir: &Path, src_dir: &Path, tests_prelude: String)
-        -> IoResult<()> {
+pub fn create_test_module(dir: &Path, src_dir: &Path) -> IoResult<()> {
     let output_path = dir.join("lib.rs");
 
     let mut src_files: Vec<_> = try!(WalkDir::new(src_dir).into_iter().collect());
@@ -91,6 +90,7 @@ pub fn create_test_module(dir: &Path, src_dir: &Path, tests_prelude: String)
         return Ok(());
     }
 
+    let tests_prelude = try!(read_file(&dir.join("prelude.rs")));
     let mut test_mod = TestModule::new(tests_prelude);
     for entry in &src_files {
         let contents = try!(read_file(entry.path()));
