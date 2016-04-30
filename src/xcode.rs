@@ -29,7 +29,7 @@ pub fn create_project(dir: &Path) -> IoResult<()> {
     let scheme_dir = proj_dir.join("xcshareddata").join("xcschemes");
     try!(fs::create_dir_all(&scheme_dir));
 
-    let mut scheme_file = try!(File::create(scheme_dir.join("contents.xcworkspacedata")));
+    let mut scheme_file = try!(File::create(scheme_dir.join("RustTests.xcscheme")));
     try!(scheme_file.write(PROJECT_SCHEME.as_bytes()));
 
     let mut test_file = try!(File::create(dir.join("RustTests.m")));
