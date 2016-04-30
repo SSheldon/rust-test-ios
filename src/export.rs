@@ -8,13 +8,13 @@ pub extern fn tests_count() -> usize {
 
 #[no_mangle]
 pub extern fn test_name(i: usize, len: &mut usize) -> *const c_char {
-    let (name, _) = TESTS[i as usize];
+    let (name, _) = TESTS[i];
     *len = name.len();
     name.as_ptr() as *const c_char
 }
 
 #[no_mangle]
 pub extern fn run_test(i: usize) {
-    let (_, test_fn) = TESTS[i as usize];
+    let (_, test_fn) = TESTS[i];
     test_fn();
 }
