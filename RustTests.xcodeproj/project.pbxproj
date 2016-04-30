@@ -8,11 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		1327C0BF1CD4792D00D35F44 /* RustTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 1327C0BE1CD4792D00D35F44 /* RustTests.m */; };
+		1327C0C41CD47C2C00D35F44 /* libRustTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1327C0C31CD47C2C00D35F44 /* libRustTests.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		1327C0BB1CD4792D00D35F44 /* RustTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RustTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1327C0BE1CD4792D00D35F44 /* RustTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RustTests.m; sourceTree = "<group>"; };
+		1327C0C31CD47C2C00D35F44 /* libRustTests.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libRustTests.a; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -20,6 +22,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1327C0C41CD47C2C00D35F44 /* libRustTests.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -30,6 +33,7 @@
 			isa = PBXGroup;
 			children = (
 				1327C0BE1CD4792D00D35F44 /* RustTests.m */,
+				1327C0C31CD47C2C00D35F44 /* libRustTests.a */,
 				1327C0BC1CD4792D00D35F44 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -156,6 +160,10 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 9.3;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)",
+				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.rust-lang.RustTests";
