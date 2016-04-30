@@ -106,10 +106,8 @@ fn read_file(path: &Path) -> IoResult<String> {
 pub fn create_test_module(dir: &Path, src_dir: &Path) -> IoResult<()> {
     let output_path = dir.join("lib.rs");
 
-    let src_files: Vec<DirEntry> = WalkDir::new(src_dir).into_iter()
-        .map(|e| e.unwrap())
-        .filter(|e| e.file_type().is_file() && has_rs_ext(e.path()))
-        .collect();
+    let mut src_files: Vec<_> = try!(WalkDir::new(src_dir).into_iter().collect());
+    src_files.retain(|e| e.file_type().is_file() && has_rs_ext(e.path()));
 
     if !should_build(&output_path, &src_files) {
         return Ok(());
@@ -119,8 +117,8 @@ pub fn create_test_module(dir: &Path, src_dir: &Path) -> IoResult<()> {
     let test_mod: TestModule = try!(src_contents.collect());
     let output = test_mod.finish();
 
-    let mut output_file = File::create(output_path).unwrap();
-    output_file.write(output.as_bytes()).unwrap();
+    let mut output_file = try!(File::create(output_path));
+    try!(output_file.write(output.as_bytes()));
 
     Ok(())
 }
