@@ -1,6 +1,7 @@
 use std::io::{Result as IoResult, Write};
 use std::fs::{File, self};
 use std::path::Path;
+use std::process::Command;
 
 static PROJECT: &'static str =
     include_str!("../RustTests.xcodeproj/project.pbxproj");
@@ -36,4 +37,15 @@ pub fn create_project(dir: &Path) -> IoResult<()> {
     try!(test_file.write(TEST_CASE.as_bytes()));
 
     Ok(())
+}
+
+pub fn run_tests(dir: &Path) -> IoResult<bool> {
+    let result = Command::new("xcodebuild")
+        .arg("-project").arg(&dir.join("RustTests.xcodeproj"))
+        .arg("-scheme").arg("RustTests")
+        .arg("-destination").arg("platform=iOS Simulator,name=iPhone 5")
+        .arg("-destination").arg("platform=iOS Simulator,name=iPhone 5s")
+        .arg("test")
+        .status();
+    result.map(|s| s.success())
 }
