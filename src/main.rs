@@ -1,6 +1,8 @@
 extern crate regex;
 extern crate walkdir;
 
+mod xcode;
+
 use std::env;
 use std::fs::{File, Metadata, self};
 use std::io::{ErrorKind, Read, Write};
