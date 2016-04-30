@@ -9,17 +9,6 @@ use walkdir::{DirEntry, WalkDir};
 static TEST_REGEX: &'static str =
     "#\\[test\\]\n(    fn ([^\\{]*)\\(\\) \\{(?s:.)*?\n    \\}\n)";
 
-static TEMPLATE: &'static str = r##"
-#[macro_use]
-extern crate objc;
-
-pub use objc::*;
-use objc::runtime::*;
-
-#[path = "../src/test_utils.rs"]
-mod test_utils;
-"##;
-
 static EXPORT_MOD: &'static str = include_str!("export.rs");
 
 struct TestModule {
@@ -91,7 +80,8 @@ fn read_file(path: &Path) -> IoResult<String> {
     Ok(buf)
 }
 
-pub fn create_test_module(dir: &Path, src_dir: &Path) -> IoResult<()> {
+pub fn create_test_module(dir: &Path, src_dir: &Path, tests_prelude: String)
+        -> IoResult<()> {
     let output_path = dir.join("lib.rs");
 
     let mut src_files: Vec<_> = try!(WalkDir::new(src_dir).into_iter().collect());
@@ -101,7 +91,7 @@ pub fn create_test_module(dir: &Path, src_dir: &Path) -> IoResult<()> {
         return Ok(());
     }
 
-    let mut test_mod = TestModule::new(TEMPLATE.to_owned());
+    let mut test_mod = TestModule::new(tests_prelude);
     for entry in &src_files {
         let contents = try!(read_file(entry.path()));
         test_mod.add_tests(&contents);
