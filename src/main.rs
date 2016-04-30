@@ -29,6 +29,7 @@ fn main() {
     let dep = cargo::Dependency {
         name: "objc",
         path: &crate_dir,
+        features: &[&"exception"],
     };
     cargo::create_config(&cwd, dep).unwrap();
     assert!(cargo::build(&cwd).unwrap() == true);

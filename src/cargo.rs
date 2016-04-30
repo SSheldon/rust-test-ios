@@ -25,12 +25,19 @@ static ARCHS: [&'static str; 5] = [
 pub struct Dependency<'a> {
     pub name: &'a str,
     pub path: &'a Path,
+    pub features: &'a [&'a str],
 }
 
 impl<'a> Dependency<'a> {
     fn to_toml(&self) -> String {
-        format!("\n[dependencies.{}]\npath = \"{}\"\n",
-            self.name, self.path.to_str().unwrap())
+        let mut toml = format!("\n[dependencies.{}]\npath = \"{}\"\n",
+            self.name, self.path.to_str().unwrap());
+        if self.features.len() > 0 {
+            toml.push_str("features = [\"");
+            toml.push_str(&self.features.join("\", \""));
+            toml.push_str("\"]\n");
+        }
+        toml
     }
 }
 
