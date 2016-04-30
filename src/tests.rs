@@ -1,5 +1,5 @@
 use std::fs::{File, Metadata, self};
-use std::io::{ErrorKind, Read, Write};
+use std::io::{ErrorKind, Read, Result as IoResult, Write};
 use std::iter::FromIterator;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
@@ -96,12 +96,14 @@ fn should_build(output: &Path, src_files: &[DirEntry]) -> bool {
         .any(|m| modified_more_recently(&m, &output_metadata))
 }
 
-fn build_test_module<I: Iterator<Item=String>>(src_contents: I) -> String {
-    let test_mod: TestModule = src_contents.collect();
-    test_mod.finish()
+fn read_file(path: &Path) -> IoResult<String> {
+    let mut f = try!(File::open(path));
+    let mut buf = String::new();
+    try!(f.read_to_string(&mut buf));
+    Ok(buf)
 }
 
-pub fn create_test_module(dir: &Path, src_dir: &Path) {
+pub fn create_test_module(dir: &Path, src_dir: &Path) -> IoResult<()> {
     let output_path = dir.join("lib.rs");
 
     let src_files: Vec<DirEntry> = WalkDir::new(src_dir).into_iter()
@@ -110,17 +112,15 @@ pub fn create_test_module(dir: &Path, src_dir: &Path) {
         .collect();
 
     if !should_build(&output_path, &src_files) {
-        return;
+        return Ok(());
     }
 
-    let src_contents = src_files.iter().map(|entry| {
-        let mut f = File::open(entry.path()).unwrap();
-        let mut buf = String::new();
-        f.read_to_string(&mut buf).unwrap();
-        buf
-    });
-    let output = build_test_module(src_contents);
+    let src_contents = src_files.iter().map(|e| read_file(e.path()));
+    let test_mod: TestModule = try!(src_contents.collect());
+    let output = test_mod.finish();
 
     let mut output_file = File::create(output_path).unwrap();
     output_file.write(output.as_bytes()).unwrap();
+
+    Ok(())
 }
