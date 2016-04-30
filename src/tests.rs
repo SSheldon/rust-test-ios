@@ -22,6 +22,49 @@ mod test_utils;
 
 static EXPORT_MOD: &'static str = include_str!("export.rs");
 
+struct TestModule {
+    output: String,
+    test_names: Vec<String>,
+    re: Regex,
+}
+
+impl TestModule {
+    fn new() -> TestModule {
+        TestModule {
+            output: TEMPLATE.to_owned(),
+            test_names: Vec::new(),
+            re: Regex::new(TEST_REGEX).unwrap(),
+        }
+    }
+
+    fn add_tests(&mut self, src_file: &str) {
+        for capture in self.re.captures_iter(src_file) {
+            self.output.push_str("\n");
+            self.output.push_str(&capture[1]);
+
+            self.test_names.push(capture[2].to_owned());
+        }
+    }
+
+    fn finish(self) -> String {
+        use std::fmt::Write;
+
+        let TestModule { mut output, test_names, .. } = self;
+
+        output.push_str("\npub static TESTS: &'static [(&'static str, fn())] = &[\n");
+        for test_name in test_names {
+            write!(&mut output, "(\"{0}\", {0}),\n", test_name).unwrap();
+        }
+        output.push_str("];\n");
+
+        output.push_str("pub mod export {\n");
+        output.push_str(EXPORT_MOD);
+        output.push_str("}\n");
+
+        output
+    }
+}
+
 fn has_rs_ext(path: &Path) -> bool {
     path.extension().and_then(|x| x.to_str()).map_or(false, |x| x == "rs")
 }
@@ -43,30 +86,11 @@ fn should_build(output: &Path, src_files: &[DirEntry]) -> bool {
 }
 
 fn build_test_module<I: Iterator<Item=String>>(src_contents: I) -> String {
-    use std::fmt::Write;
-
-    let mut output = TEMPLATE.to_owned();
-    let mut test_names = Vec::new();
-
-    let re = Regex::new(TEST_REGEX).unwrap();
+    let mut test_mod = TestModule::new();
     for buf in src_contents {
-        for capture in re.captures_iter(&buf) {
-            output.push_str("\n");
-            output.push_str(&capture[1]);
-
-            test_names.push(capture[2].to_owned());
-        }
+        test_mod.add_tests(&buf);
     }
-
-    output.push_str("\npub static TESTS: &'static [(&'static str, fn())] = &[\n");
-    for test_name in &test_names {
-        write!(&mut output, "(\"{0}\", {0}),\n", test_name).unwrap();
-    }
-    output.push_str("];\n");
-    output.push_str("pub mod export {\n");
-    output.push_str(EXPORT_MOD);
-    output.push_str("}\n");
-    output
+    test_mod.finish()
 }
 
 pub fn create_test_module(dir: &Path, src_dir: &Path) {
