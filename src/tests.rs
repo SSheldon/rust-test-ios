@@ -1,5 +1,6 @@
 use std::fs::{File, Metadata, self};
 use std::io::{ErrorKind, Read, Write};
+use std::iter::FromIterator;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 
@@ -65,6 +66,16 @@ impl TestModule {
     }
 }
 
+impl FromIterator<String> for TestModule {
+    fn from_iter<I>(iterator: I) -> Self where I: IntoIterator<Item=String> {
+        let mut test_mod = TestModule::new();
+        for file in iterator {
+            test_mod.add_tests(&file);
+        }
+        test_mod
+    }
+}
+
 fn has_rs_ext(path: &Path) -> bool {
     path.extension().and_then(|x| x.to_str()).map_or(false, |x| x == "rs")
 }
@@ -86,10 +97,7 @@ fn should_build(output: &Path, src_files: &[DirEntry]) -> bool {
 }
 
 fn build_test_module<I: Iterator<Item=String>>(src_contents: I) -> String {
-    let mut test_mod = TestModule::new();
-    for buf in src_contents {
-        test_mod.add_tests(&buf);
-    }
+    let test_mod: TestModule = src_contents.collect();
     test_mod.finish()
 }
 
