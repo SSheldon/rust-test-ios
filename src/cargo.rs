@@ -1,7 +1,10 @@
+use std::error::Error;
 use std::io::{Result as IoResult, Write};
 use std::fs::File;
 use std::path::Path;
 use std::process::Command;
+
+use serde_json::{Value, self};
 
 static TEMPLATE: &'static str = r##"
 [package]
@@ -22,10 +25,10 @@ static ARCHS: [&'static str; 5] = [
     "aarch64",
 ];
 
-pub struct Dependency<'a> {
-    pub name: &'a str,
-    pub path: &'a Path,
-    pub features: &'a [&'a str],
+struct Dependency<'a> {
+    name: &'a str,
+    path: &'a Path,
+    features: &'a [&'a str],
 }
 
 impl<'a> Dependency<'a> {
@@ -41,7 +44,35 @@ impl<'a> Dependency<'a> {
     }
 }
 
-pub fn create_config(dir: &Path, dependency: Dependency) -> IoResult<()> {
+fn read_name(crate_dir: &Path) -> Result<String, Box<Error>> {
+    let out = Command::new("cargo")
+        .arg("read-manifest")
+        .arg("--manifest-path").arg(&crate_dir.join("Cargo.toml"))
+        .output();
+    let out = try!(out);
+    if !out.status.success() {
+        err!("cargo read-manifest failed with status {}", out.status);
+    }
+
+    let value: Value = try!(serde_json::from_slice(&out.stdout));
+    let mut obj = match value {
+        Value::Object(o) => o,
+        _ => err!("crate manifest was not a JSON object"),
+    };
+    match obj.remove("name") {
+        Some(Value::String(s)) => Ok(s),
+        _ => err!("crate manifest did not include key \"name\""),
+    }
+}
+
+pub fn create_config(dir: &Path, crate_dir: &Path) -> Result<(), Box<Error>> {
+    let crate_name = try!(read_name(crate_dir));
+    let dependency = Dependency {
+        name: &crate_name,
+        path: crate_dir,
+        features: &[],
+    };
+
     let mut config_file = try!(File::create(dir.join("Cargo.toml")));
     try!(config_file.write(TEMPLATE.as_bytes()));
     try!(config_file.write(dependency.to_toml().as_bytes()));

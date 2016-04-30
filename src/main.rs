@@ -2,6 +2,12 @@ extern crate regex;
 extern crate serde_json;
 extern crate walkdir;
 
+macro_rules! err {
+    ($($e:expr),*) => ({
+        return Err(From::from(format!($($e),*)));
+    })
+}
+
 mod cargo;
 mod tests;
 mod xcode;
@@ -30,12 +36,7 @@ fn main() {
     let prelude = TESTS_PRELUDE.to_owned();
     tests::create_test_module(&build_dir, &src_dir, prelude).unwrap();
 
-    let dep = cargo::Dependency {
-        name: "objc",
-        path: &crate_dir,
-        features: &[&"exception"],
-    };
-    cargo::create_config(&build_dir, dep).unwrap();
+    cargo::create_config(&build_dir, &crate_dir).unwrap();
     assert!(cargo::build(&build_dir).unwrap() == true);
 
     xcode::create_project(&build_dir).unwrap();
