@@ -20,12 +20,17 @@ mod test_utils;
 
 fn main() {
     let cwd = env::current_dir().unwrap();
-    let src_dir = cwd.parent().unwrap().join("src");
+    let crate_dir = cwd.parent().unwrap();
 
+    let src_dir = crate_dir.join("src");
     let prelude = TESTS_PRELUDE.to_owned();
     tests::create_test_module(&cwd, &src_dir, prelude).unwrap();
 
-    cargo::create_config(&cwd).unwrap();
+    let dep = cargo::Dependency {
+        name: "objc",
+        path: &crate_dir,
+    };
+    cargo::create_config(&cwd, dep).unwrap();
     assert!(cargo::build(&cwd).unwrap() == true);
 
     xcode::create_project(&cwd).unwrap();

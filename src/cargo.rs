@@ -12,10 +12,6 @@ version = "0.0.0"
 name = "ios_tests"
 path = "lib.rs"
 crate-type = ["staticlib"]
-
-[dependencies.objc]
-path = ".."
-features = ["exception"]
 "##;
 
 static ARCHS: [&'static str; 5] = [
@@ -26,9 +22,22 @@ static ARCHS: [&'static str; 5] = [
     "aarch64",
 ];
 
-pub fn create_config(dir: &Path) -> IoResult<()> {
+pub struct Dependency<'a> {
+    pub name: &'a str,
+    pub path: &'a Path,
+}
+
+impl<'a> Dependency<'a> {
+    fn to_toml(&self) -> String {
+        format!("\n[dependencies.{}]\npath = \"{}\"\n",
+            self.name, self.path.to_str().unwrap())
+    }
+}
+
+pub fn create_config(dir: &Path, dependency: Dependency) -> IoResult<()> {
     let mut config_file = try!(File::create(dir.join("Cargo.toml")));
     try!(config_file.write(TEMPLATE.as_bytes()));
+    try!(config_file.write(dependency.to_toml().as_bytes()));
     Ok(())
 }
 
