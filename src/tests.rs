@@ -1,6 +1,5 @@
 use std::fs::{File, Metadata, self};
 use std::io::{ErrorKind, Read, Result as IoResult, Write};
-use std::iter::FromIterator;
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 
@@ -30,9 +29,9 @@ struct TestModule {
 }
 
 impl TestModule {
-    fn new() -> TestModule {
+    fn new(prelude: String) -> TestModule {
         TestModule {
-            output: TEMPLATE.to_owned(),
+            output: prelude,
             test_names: Vec::new(),
             re: Regex::new(TEST_REGEX).unwrap(),
         }
@@ -63,16 +62,6 @@ impl TestModule {
         output.push_str("}\n");
 
         output
-    }
-}
-
-impl FromIterator<String> for TestModule {
-    fn from_iter<I>(iterator: I) -> Self where I: IntoIterator<Item=String> {
-        let mut test_mod = TestModule::new();
-        for file in iterator {
-            test_mod.add_tests(&file);
-        }
-        test_mod
     }
 }
 
@@ -112,8 +101,11 @@ pub fn create_test_module(dir: &Path, src_dir: &Path) -> IoResult<()> {
         return Ok(());
     }
 
-    let src_contents = src_files.iter().map(|e| read_file(e.path()));
-    let test_mod: TestModule = try!(src_contents.collect());
+    let mut test_mod = TestModule::new(TEMPLATE.to_owned());
+    for entry in &src_files {
+        let contents = try!(read_file(entry.path()));
+        test_mod.add_tests(&contents);
+    }
     let output = test_mod.finish();
 
     let mut output_file = try!(File::create(output_path));
