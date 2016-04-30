@@ -1,6 +1,7 @@
 extern crate regex;
 extern crate walkdir;
 
+mod cargo;
 mod xcode;
 
 use std::env;
