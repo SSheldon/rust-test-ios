@@ -5,12 +5,11 @@ use std::process::Command;
 
 static TEMPLATE: &'static str = r##"
 [package]
-name = "objc-tests"
+name = "ios-tests"
 version = "0.0.0"
-authors = ["Steven Sheldon"]
 
 [lib]
-name = "objc_tests"
+name = "ios_tests"
 path = "lib.rs"
 crate-type = ["staticlib"]
 
@@ -49,7 +48,7 @@ pub fn build(dir: &Path) -> IoResult<bool> {
     }
 
     let cargo_mode = "debug";
-    let lib_name = "libobjc_tests.a";
+    let lib_name = "libios_tests.a";
     let target_libs: Vec<_> = targets.iter()
         .map(|t| dir.join("target").join(t).join(cargo_mode).join(lib_name))
         .collect();
