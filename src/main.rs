@@ -24,6 +24,8 @@ use objc::runtime::*;
 mod test_utils;
 "##;
 
+static EXPORT_MOD: &'static str = include_str!("export.rs");
+
 fn has_rs_ext(path: &Path) -> bool {
     path.extension().and_then(|x| x.to_str()).map_or(false, |x| x == "rs")
 }
@@ -64,7 +66,10 @@ fn build_test_module<I: Iterator<Item=String>>(src_contents: I) -> String {
     for test_name in &test_names {
         write!(&mut output, "(\"{0}\", {0}),\n", test_name).unwrap();
     }
-    output.push_str("];\npub mod export;\n");
+    output.push_str("];\n");
+    output.push_str("pub mod export {\n");
+    output.push_str(EXPORT_MOD);
+    output.push_str("}\n");
     output
 }
 
