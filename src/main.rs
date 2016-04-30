@@ -1,4 +1,5 @@
 extern crate regex;
+extern crate serde_json;
 extern crate walkdir;
 
 mod cargo;

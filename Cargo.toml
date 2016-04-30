@@ -5,4 +5,5 @@ authors = ["Steven Sheldon"]
 
 [dependencies]
 regex = "0.1"
+serde_json = "0.7"
 walkdir = "0.1"
