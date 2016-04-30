@@ -85,15 +85,14 @@ fn modified_more_recently(m1: &Metadata, m2: &Metadata) -> bool {
         (m1.mtime() == m2.mtime() && m1.mtime_nsec() > m2.mtime_nsec())
 }
 
-fn should_build(output: &Path, src_files: &[DirEntry]) -> bool {
+fn should_build(output: &Path, src_files: &[DirEntry]) -> IoResult<bool> {
     let output_metadata = match fs::metadata(output) {
         Ok(m) => m,
-        Err(ref e) if e.kind() == ErrorKind::NotFound => return true,
-        Err(e) => panic!("Error getting output file metadata: {:?}", e),
+        Err(ref e) if e.kind() == ErrorKind::NotFound => return Ok(true),
+        Err(e) => return Err(e),
     };
-    src_files.iter()
-        .map(|e| e.metadata().unwrap())
-        .any(|m| modified_more_recently(&m, &output_metadata))
+    let metas: Vec<_> = try!(src_files.iter().map(|e| e.metadata()).collect());
+    Ok(metas.into_iter().any(|m| modified_more_recently(&m, &output_metadata)))
 }
 
 fn read_file(path: &Path) -> IoResult<String> {
@@ -109,7 +108,7 @@ pub fn create_test_module(dir: &Path, src_dir: &Path) -> IoResult<()> {
     let mut src_files: Vec<_> = try!(WalkDir::new(src_dir).into_iter().collect());
     src_files.retain(|e| e.file_type().is_file() && has_rs_ext(e.path()));
 
-    if !should_build(&output_path, &src_files) {
+    if !try!(should_build(&output_path, &src_files)) {
         return Ok(());
     }
 
