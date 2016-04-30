@@ -88,6 +88,7 @@ pub fn build(dir: &Path) -> IoResult<bool> {
         let result = Command::new("cargo")
             .arg("build")
             .arg("--target").arg(target)
+            .arg("--manifest-path").arg(&dir.join("Cargo.toml"))
             .status();
         if !try!(result).success() {
             return Ok(false);
