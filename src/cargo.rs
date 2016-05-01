@@ -8,11 +8,11 @@ use serde_json::{Value, self};
 
 static TEMPLATE: &'static str = r##"
 [package]
-name = "ios-tests"
+name = "tests-ios"
 version = "0.0.0"
 
 [lib]
-name = "ios_tests"
+name = "tests_ios"
 path = "lib.rs"
 crate-type = ["staticlib"]
 "##;
@@ -96,7 +96,7 @@ pub fn build(dir: &Path) -> IoResult<bool> {
     }
 
     let cargo_mode = "debug";
-    let lib_name = "libios_tests.a";
+    let lib_name = "libtests_ios.a";
     let target_libs: Vec<_> = targets.iter()
         .map(|t| dir.join("target").join(t).join(cargo_mode).join(lib_name))
         .collect();
