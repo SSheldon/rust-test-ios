@@ -126,16 +126,64 @@ impl Config {
     }
 }
 
+fn filter_result<T, E>(res: Result<Option<T>, E>) -> Option<Result<T, E>> {
+    match res {
+        Ok(Some(t)) => Some(Ok(t)),
+        Ok(None) => None,
+        Err(e) => Some(Err(e)),
+    }
+}
+
+fn read_package(package: Value, dev_deps: &mut Vec<String>)
+        -> BuildResult<Option<Dependency>> {
+    let position = {
+        let name = match package.find("name") {
+            Some(&Value::String(ref s)) => s,
+            _ => err!("metadata package did not include key \"name\""),
+        };
+        dev_deps.iter().position(|n| n == name)
+    };
+    let name = match position {
+        Some(i) => dev_deps.swap_remove(i),
+        None => return Ok(None),
+    };
+    let source = try!(DependencySource::from_metadata(package));
+    Ok(Some(Dependency {
+        name: name,
+        source: source,
+        features: Vec::new(),
+    }))
+}
+
 fn read_deps_metadata(crate_dir: &Path, dev_deps: Vec<String>)
         -> BuildResult<Vec<Dependency>> {
-    let deps = dev_deps.into_iter()
-        .map(|n| Dependency {
-            name: n,
-            source: DependencySource::Remote("*".to_owned()),
-            features: Vec::new(),
-        })
-        .collect();
-    Ok(deps)
+    if dev_deps.len() == 0 {
+        return Ok(Vec::new());
+    }
+
+    let out = Command::new("cargo")
+        .arg("metadata")
+        .arg("--manifest-path").arg(&crate_dir.join("Cargo.toml"))
+        .output();
+    let out = try!(out);
+    if !out.status.success() {
+        err!("cargo metadata failed with status {}", out.status);
+    }
+
+    let value: Value = try!(serde_json::from_slice(&out.stdout));
+    let mut obj = match value {
+        Value::Object(o) => o,
+        _ => err!("crate metadata was not a JSON object"),
+    };
+    let packages = match obj.remove("packages") {
+        Some(Value::Array(a)) => a,
+        _ => err!("crate metadata did not include \"packages\""),
+    };
+
+    let mut dev_deps = dev_deps;
+    packages.into_iter()
+        .filter_map(|p| filter_result(read_package(p, &mut dev_deps)))
+        .collect()
 }
 
 fn read_dev_dep(dep: Value) -> BuildResult<Option<String>> {
@@ -152,14 +200,6 @@ fn read_dev_dep(dep: Value) -> BuildResult<Option<String>> {
         Some(Value::String(s)) => Ok(Some(s)),
         Some(v) => err!("Dependency \"name\" not a string: {:?}", v),
         None => err!("Missing \"name\" in dependency: {:?}", dep_obj),
-    }
-}
-
-fn filter_read_dev_dep(dep: Value) -> Option<BuildResult<String>> {
-    match read_dev_dep(dep) {
-        Ok(Some(t)) => Some(Ok(t)),
-        Ok(None) => None,
-        Err(e) => Some(Err(e)),
     }
 }
 
@@ -193,7 +233,7 @@ fn read_config(crate_dir: &Path) -> BuildResult<Config> {
         _ => Vec::new(),
     };
     let dev_deps: Vec<_> = try!(deps.into_iter()
-        .filter_map(filter_read_dev_dep)
+        .filter_map(|d| filter_result(read_dev_dep(d)))
         .collect());
     let dev_deps = try!(read_deps_metadata(crate_dir, dev_deps));
 
