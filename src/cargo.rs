@@ -72,7 +72,7 @@ fn toml_config(dep: Dependency) -> Table {
     config
 }
 
-fn read_name(crate_dir: &Path) -> Result<String, Box<Error>> {
+fn read_config(crate_dir: &Path) -> Result<Dependency, Box<Error>> {
     let out = Command::new("cargo")
         .arg("read-manifest")
         .arg("--manifest-path").arg(&crate_dir.join("Cargo.toml"))
@@ -87,19 +87,19 @@ fn read_name(crate_dir: &Path) -> Result<String, Box<Error>> {
         Value::Object(o) => o,
         _ => err!("crate manifest was not a JSON object"),
     };
-    match obj.remove("name") {
-        Some(Value::String(s)) => Ok(s),
+    let name = match obj.remove("name") {
+        Some(Value::String(s)) => s,
         _ => err!("crate manifest did not include key \"name\""),
-    }
+    };
+    Ok(Dependency {
+        name: name,
+        source: DependencySource::Local(crate_dir.to_owned()),
+        features: Vec::new(),
+    })
 }
 
 pub fn create_config(dir: &Path, crate_dir: &Path) -> Result<(), Box<Error>> {
-    let crate_name = try!(read_name(crate_dir));
-    let dependency = Dependency {
-        name: crate_name,
-        source: DependencySource::Local(crate_dir.to_owned()),
-        features: Vec::new(),
-    };
+    let dependency = try!(read_config(crate_dir));
 
     let config = TomlValue::Table(toml_config(dependency)).to_string();
     let mut config_file = try!(File::create(dir.join("Cargo.toml")));
