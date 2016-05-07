@@ -88,6 +88,49 @@ impl Config {
     }
 }
 
+fn read_deps_metadata(crate_dir: &Path, dev_deps: Vec<(String, String)>)
+        -> BuildResult<Vec<Dependency>> {
+    let deps = dev_deps.into_iter()
+        .map(|(n, v)| Dependency {
+            name: n,
+            source: DependencySource::Remote(v),
+            features: Vec::new(),
+        })
+        .collect();
+    Ok(deps)
+}
+
+fn read_dev_dep(dep: Value) -> BuildResult<Option<(String, String)>> {
+    let mut dep_obj = match dep {
+        Value::Object(o) => o,
+        _ => err!("Dependency from cargo read-manifest was not a JSON object"),
+    };
+    match dep_obj.get("kind") {
+        Some(&Value::String(ref s)) if s == "dev" => (),
+        None | Some(&Value::String(_)) => return Ok(None),
+        Some(v) => err!("Dependency \"kind\" not a string: {:?}", v),
+    }
+    let name = match dep_obj.remove("name") {
+        Some(Value::String(s)) => s,
+        Some(v) => err!("Dependency \"name\" not a string: {:?}", v),
+        None => err!("Missing \"name\" in dependency: {:?}", dep_obj),
+    };
+    let version = match dep_obj.remove("req") {
+        Some(Value::String(s)) => s,
+        Some(v) => err!("Dependency \"req\" not a string: {:?}", v),
+        None => "*".to_owned(),
+    };
+    Ok(Some((name, version)))
+}
+
+fn filter_read_dev_dep(dep: Value) -> Option<BuildResult<(String, String)>> {
+    match read_dev_dep(dep) {
+        Ok(Some(t)) => Some(Ok(t)),
+        Ok(None) => None,
+        Err(e) => Some(Err(e)),
+    }
+}
+
 fn read_config(crate_dir: &Path) -> BuildResult<Config> {
     let out = Command::new("cargo")
         .arg("read-manifest")
@@ -112,7 +155,17 @@ fn read_config(crate_dir: &Path) -> BuildResult<Config> {
         source: DependencySource::Local(crate_dir.to_owned()),
         features: Vec::new(),
     };
-    Ok(Config { crate_dep: crate_dep, dev_deps: Vec::new() })
+
+    let deps = match obj.remove("dependencies") {
+        Some(Value::Array(a)) => a,
+        _ => Vec::new(),
+    };
+    let dev_deps: Vec<_> = try!(deps.into_iter()
+        .filter_map(filter_read_dev_dep)
+        .collect());
+    let dev_deps = try!(read_deps_metadata(crate_dir, dev_deps));
+
+    Ok(Config { crate_dep: crate_dep, dev_deps: dev_deps })
 }
 
 pub fn create_config(dir: &Path, crate_dir: &Path) -> BuildResult {
