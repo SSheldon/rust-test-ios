@@ -7,3 +7,8 @@ authors = ["Steven Sheldon"]
 regex = "0.1"
 serde_json = "0.7"
 walkdir = "0.1"
+
+[dependencies.toml]
+version = "0.1"
+default-features = false
+features = ["serde"]

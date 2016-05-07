@@ -5,17 +5,7 @@ use std::path::Path;
 use std::process::Command;
 
 use serde_json::{Value, self};
-
-static TEMPLATE: &'static str = r##"
-[package]
-name = "tests-ios"
-version = "0.0.0"
-
-[lib]
-name = "tests_ios"
-path = "lib.rs"
-crate-type = ["staticlib"]
-"##;
+use toml::{Table, Value as TomlValue};
 
 static ARCHS: [&'static str; 5] = [
     "i386",
@@ -31,17 +21,35 @@ struct Dependency<'a> {
     features: &'a [&'a str],
 }
 
-impl<'a> Dependency<'a> {
-    fn to_toml(&self) -> String {
-        let mut toml = format!("\n[dependencies.{}]\npath = \"{}\"\n",
-            self.name, self.path.to_str().unwrap());
-        if self.features.len() > 0 {
-            toml.push_str("features = [\"");
-            toml.push_str(&self.features.join("\", \""));
-            toml.push_str("\"]\n");
-        }
-        toml
+fn toml_config(dep: Dependency) -> Table {
+    let mut config = Table::new();
+
+    let mut package = Table::new();
+    package.insert("name".to_owned(), TomlValue::String("tests-ios".to_owned()));
+    package.insert("version".to_owned(), TomlValue::String("0.0.0".to_owned()));
+    config.insert("package".to_owned(), TomlValue::Table(package));
+
+    let mut lib = Table::new();
+    lib.insert("name".to_owned(), TomlValue::String("tests_ios".to_owned()));
+    lib.insert("path".to_owned(), TomlValue::String("lib.rs".to_owned()));
+    let crate_type = vec![TomlValue::String("staticlib".to_owned())];
+    lib.insert("crate-type".to_owned(), TomlValue::Array(crate_type));
+    config.insert("lib".to_owned(), TomlValue::Table(lib));
+
+    let mut dependencies = Table::new();
+    let mut crate_dep = Table::new();
+    let path = dep.path.to_str().unwrap().to_owned();
+    crate_dep.insert("path".to_owned(), TomlValue::String(path));
+    if dep.features.len() > 0 {
+        let features = dep.features.iter()
+            .map(|&f| TomlValue::String(f.to_owned()))
+            .collect();
+        crate_dep.insert("features".to_owned(), TomlValue::Array(features));
     }
+    dependencies.insert(dep.name.to_owned(), TomlValue::Table(crate_dep));
+    config.insert("dependencies".to_owned(), TomlValue::Table(dependencies));
+
+    config
 }
 
 fn read_name(crate_dir: &Path) -> Result<String, Box<Error>> {
@@ -73,9 +81,9 @@ pub fn create_config(dir: &Path, crate_dir: &Path) -> Result<(), Box<Error>> {
         features: &[],
     };
 
+    let config = TomlValue::Table(toml_config(dependency)).to_string();
     let mut config_file = try!(File::create(dir.join("Cargo.toml")));
-    try!(config_file.write(TEMPLATE.as_bytes()));
-    try!(config_file.write(dependency.to_toml().as_bytes()));
+    try!(config_file.write(config.as_bytes()));
     Ok(())
 }
 

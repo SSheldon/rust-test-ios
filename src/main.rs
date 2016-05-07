@@ -1,5 +1,6 @@
 extern crate regex;
 extern crate serde_json;
+extern crate toml;
 extern crate walkdir;
 
 macro_rules! err {
