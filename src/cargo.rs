@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::io::{Result as IoResult, Write};
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use serde_json::{Value, self};
@@ -15,10 +15,38 @@ static ARCHS: [&'static str; 5] = [
     "aarch64",
 ];
 
-struct Dependency<'a> {
-    name: &'a str,
-    path: &'a Path,
-    features: &'a [&'a str],
+enum DependencySource {
+    Local(PathBuf),
+    Remote(String),
+}
+
+struct Dependency {
+    name: String,
+    source: DependencySource,
+    features: Vec<String>,
+}
+
+impl Dependency {
+    fn into_toml(self) -> (String, Table) {
+        let Dependency { name, source, features } = self;
+        let mut dep = Table::new();
+        match source {
+            DependencySource::Local(path) => {
+                let path = path.into_os_string().into_string().unwrap();
+                dep.insert("path".to_owned(), TomlValue::String(path));
+            }
+            DependencySource::Remote(version) => {
+                dep.insert("version".to_owned(), TomlValue::String(version));
+            }
+        }
+        if features.len() > 0 {
+            let features = features.into_iter()
+                .map(TomlValue::String)
+                .collect();
+            dep.insert("features".to_owned(), TomlValue::Array(features));
+        }
+        (name, dep)
+    }
 }
 
 fn toml_config(dep: Dependency) -> Table {
@@ -37,16 +65,8 @@ fn toml_config(dep: Dependency) -> Table {
     config.insert("lib".to_owned(), TomlValue::Table(lib));
 
     let mut dependencies = Table::new();
-    let mut crate_dep = Table::new();
-    let path = dep.path.to_str().unwrap().to_owned();
-    crate_dep.insert("path".to_owned(), TomlValue::String(path));
-    if dep.features.len() > 0 {
-        let features = dep.features.iter()
-            .map(|&f| TomlValue::String(f.to_owned()))
-            .collect();
-        crate_dep.insert("features".to_owned(), TomlValue::Array(features));
-    }
-    dependencies.insert(dep.name.to_owned(), TomlValue::Table(crate_dep));
+    let (name, crate_dep) = dep.into_toml();
+    dependencies.insert(name, TomlValue::Table(crate_dep));
     config.insert("dependencies".to_owned(), TomlValue::Table(dependencies));
 
     config
@@ -76,9 +96,9 @@ fn read_name(crate_dir: &Path) -> Result<String, Box<Error>> {
 pub fn create_config(dir: &Path, crate_dir: &Path) -> Result<(), Box<Error>> {
     let crate_name = try!(read_name(crate_dir));
     let dependency = Dependency {
-        name: &crate_name,
-        path: crate_dir,
-        features: &[],
+        name: crate_name,
+        source: DependencySource::Local(crate_dir.to_owned()),
+        features: Vec::new(),
     };
 
     let config = TomlValue::Table(toml_config(dependency)).to_string();
