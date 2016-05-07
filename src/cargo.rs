@@ -50,30 +50,39 @@ impl Dependency {
     }
 }
 
-fn toml_config(dep: Dependency) -> Table {
-    let mut config = Table::new();
+struct Config {
+    crate_dep: Dependency,
+}
+impl Config {
+    fn into_toml(self) -> Table {
+        let mut config = Table::new();
 
-    let mut package = Table::new();
-    package.insert("name".to_owned(), TomlValue::String("tests-ios".to_owned()));
-    package.insert("version".to_owned(), TomlValue::String("0.0.0".to_owned()));
-    config.insert("package".to_owned(), TomlValue::Table(package));
+        let mut package = Table::new();
+        package.insert("name".to_owned(), TomlValue::String("tests-ios".to_owned()));
+        package.insert("version".to_owned(), TomlValue::String("0.0.0".to_owned()));
+        config.insert("package".to_owned(), TomlValue::Table(package));
 
-    let mut lib = Table::new();
-    lib.insert("name".to_owned(), TomlValue::String("tests_ios".to_owned()));
-    lib.insert("path".to_owned(), TomlValue::String("lib.rs".to_owned()));
-    let crate_type = vec![TomlValue::String("staticlib".to_owned())];
-    lib.insert("crate-type".to_owned(), TomlValue::Array(crate_type));
-    config.insert("lib".to_owned(), TomlValue::Table(lib));
+        let mut lib = Table::new();
+        lib.insert("name".to_owned(), TomlValue::String("tests_ios".to_owned()));
+        lib.insert("path".to_owned(), TomlValue::String("lib.rs".to_owned()));
+        let crate_type = vec![TomlValue::String("staticlib".to_owned())];
+        lib.insert("crate-type".to_owned(), TomlValue::Array(crate_type));
+        config.insert("lib".to_owned(), TomlValue::Table(lib));
 
-    let mut dependencies = Table::new();
-    let (name, crate_dep) = dep.into_toml();
-    dependencies.insert(name, TomlValue::Table(crate_dep));
-    config.insert("dependencies".to_owned(), TomlValue::Table(dependencies));
+        let mut dependencies = Table::new();
+        let (name, crate_dep) = self.crate_dep.into_toml();
+        dependencies.insert(name, TomlValue::Table(crate_dep));
+        config.insert("dependencies".to_owned(), TomlValue::Table(dependencies));
 
-    config
+        config
+    }
+
+    fn into_string(self) -> String {
+        TomlValue::Table(self.into_toml()).to_string()
+    }
 }
 
-fn read_config(crate_dir: &Path) -> BuildResult<Dependency> {
+fn read_config(crate_dir: &Path) -> BuildResult<Config> {
     let out = Command::new("cargo")
         .arg("read-manifest")
         .arg("--manifest-path").arg(&crate_dir.join("Cargo.toml"))
@@ -92,17 +101,17 @@ fn read_config(crate_dir: &Path) -> BuildResult<Dependency> {
         Some(Value::String(s)) => s,
         _ => err!("crate manifest did not include key \"name\""),
     };
-    Ok(Dependency {
+    let crate_dep = Dependency {
         name: name,
         source: DependencySource::Local(crate_dir.to_owned()),
         features: Vec::new(),
-    })
+    };
+    Ok(Config { crate_dep: crate_dep })
 }
 
 pub fn create_config(dir: &Path, crate_dir: &Path) -> BuildResult {
-    let dependency = try!(read_config(crate_dir));
-
-    let config = TomlValue::Table(toml_config(dependency)).to_string();
+    let config = try!(read_config(crate_dir));
+    let config = config.into_string();
     let mut config_file = try!(File::create(dir.join("Cargo.toml")));
     try!(config_file.write(config.as_bytes()));
     Ok(())
