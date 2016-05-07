@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::io::{Result as IoResult, Write};
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -6,6 +5,8 @@ use std::process::Command;
 
 use serde_json::{Value, self};
 use toml::{Table, Value as TomlValue};
+
+use BuildResult;
 
 static ARCHS: [&'static str; 5] = [
     "i386",
@@ -72,7 +73,7 @@ fn toml_config(dep: Dependency) -> Table {
     config
 }
 
-fn read_config(crate_dir: &Path) -> Result<Dependency, Box<Error>> {
+fn read_config(crate_dir: &Path) -> BuildResult<Dependency> {
     let out = Command::new("cargo")
         .arg("read-manifest")
         .arg("--manifest-path").arg(&crate_dir.join("Cargo.toml"))
@@ -98,7 +99,7 @@ fn read_config(crate_dir: &Path) -> Result<Dependency, Box<Error>> {
     })
 }
 
-pub fn create_config(dir: &Path, crate_dir: &Path) -> Result<(), Box<Error>> {
+pub fn create_config(dir: &Path, crate_dir: &Path) -> BuildResult {
     let dependency = try!(read_config(crate_dir));
 
     let config = TomlValue::Table(toml_config(dependency)).to_string();

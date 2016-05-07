@@ -14,7 +14,10 @@ mod tests;
 mod xcode;
 
 use std::env;
+use std::error::Error;
 use std::fs;
+
+pub type BuildResult<T = ()> = Result<T, Box<Error>>;
 
 fn main() {
     let crate_dir = env::current_dir().unwrap();
