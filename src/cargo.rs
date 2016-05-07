@@ -126,19 +126,19 @@ impl Config {
     }
 }
 
-fn read_deps_metadata(crate_dir: &Path, dev_deps: Vec<(String, String)>)
+fn read_deps_metadata(crate_dir: &Path, dev_deps: Vec<String>)
         -> BuildResult<Vec<Dependency>> {
     let deps = dev_deps.into_iter()
-        .map(|(n, v)| Dependency {
+        .map(|n| Dependency {
             name: n,
-            source: DependencySource::Remote(v),
+            source: DependencySource::Remote("*".to_owned()),
             features: Vec::new(),
         })
         .collect();
     Ok(deps)
 }
 
-fn read_dev_dep(dep: Value) -> BuildResult<Option<(String, String)>> {
+fn read_dev_dep(dep: Value) -> BuildResult<Option<String>> {
     let mut dep_obj = match dep {
         Value::Object(o) => o,
         _ => err!("Dependency from cargo read-manifest was not a JSON object"),
@@ -148,20 +148,14 @@ fn read_dev_dep(dep: Value) -> BuildResult<Option<(String, String)>> {
         None | Some(&Value::String(_)) => return Ok(None),
         Some(v) => err!("Dependency \"kind\" not a string: {:?}", v),
     }
-    let name = match dep_obj.remove("name") {
-        Some(Value::String(s)) => s,
+    match dep_obj.remove("name") {
+        Some(Value::String(s)) => Ok(Some(s)),
         Some(v) => err!("Dependency \"name\" not a string: {:?}", v),
         None => err!("Missing \"name\" in dependency: {:?}", dep_obj),
-    };
-    let version = match dep_obj.remove("req") {
-        Some(Value::String(s)) => s,
-        Some(v) => err!("Dependency \"req\" not a string: {:?}", v),
-        None => "*".to_owned(),
-    };
-    Ok(Some((name, version)))
+    }
 }
 
-fn filter_read_dev_dep(dep: Value) -> Option<BuildResult<(String, String)>> {
+fn filter_read_dev_dep(dep: Value) -> Option<BuildResult<String>> {
     match read_dev_dep(dep) {
         Ok(Some(t)) => Some(Ok(t)),
         Ok(None) => None,
