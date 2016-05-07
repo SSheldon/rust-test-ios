@@ -6,6 +6,8 @@ use std::path::Path;
 use regex::Regex;
 use walkdir::{DirEntry, WalkDir};
 
+use BuildResult;
+
 static TEST_REGEX: &'static str =
     "#\\[test\\]\n(    fn ([^\\{]*)\\(\\) \\{(?s:.)*?\n    \\}\n)";
 
@@ -73,14 +75,17 @@ fn should_build(output: &Path, src_files: &[DirEntry]) -> IoResult<bool> {
     Ok(metas.into_iter().any(|m| modified_more_recently(&m, &output_metadata)))
 }
 
-fn read_file(path: &Path) -> IoResult<String> {
-    let mut f = try!(File::open(path));
+fn read_file(path: &Path) -> BuildResult<String> {
+    let mut f = match File::open(path) {
+        Ok(f) => f,
+        Err(e) => err!("Could not open file at {}: {}", path.display(), e),
+    };
     let mut buf = String::new();
     try!(f.read_to_string(&mut buf));
     Ok(buf)
 }
 
-pub fn create_test_module(dir: &Path, src_dir: &Path) -> IoResult<()> {
+pub fn create_test_module(dir: &Path, src_dir: &Path) -> BuildResult {
     let output_path = dir.join("lib.rs");
 
     let mut src_files: Vec<_> = try!(WalkDir::new(src_dir).into_iter().collect());
