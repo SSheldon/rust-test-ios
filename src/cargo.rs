@@ -52,7 +52,9 @@ impl Dependency {
 
 struct Config {
     crate_dep: Dependency,
+    dev_deps: Vec<Dependency>,
 }
+
 impl Config {
     fn into_toml(self) -> Table {
         let mut config = Table::new();
@@ -72,6 +74,10 @@ impl Config {
         let mut dependencies = Table::new();
         let (name, crate_dep) = self.crate_dep.into_toml();
         dependencies.insert(name, TomlValue::Table(crate_dep));
+        for dep in self.dev_deps {
+            let (name, dep) = dep.into_toml();
+            dependencies.insert(name, TomlValue::Table(dep));
+        }
         config.insert("dependencies".to_owned(), TomlValue::Table(dependencies));
 
         config
@@ -106,7 +112,7 @@ fn read_config(crate_dir: &Path) -> BuildResult<Config> {
         source: DependencySource::Local(crate_dir.to_owned()),
         features: Vec::new(),
     };
-    Ok(Config { crate_dep: crate_dep })
+    Ok(Config { crate_dep: crate_dep, dev_deps: Vec::new() })
 }
 
 pub fn create_config(dir: &Path, crate_dir: &Path) -> BuildResult {
