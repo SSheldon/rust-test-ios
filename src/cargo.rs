@@ -3,6 +3,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use regex::Regex;
 use serde_json::{Value, self};
 use toml::{Table, Value as TomlValue};
 
@@ -19,6 +20,43 @@ static ARCHS: [&'static str; 5] = [
 enum DependencySource {
     Local(PathBuf),
     Remote(String),
+}
+
+impl DependencySource {
+    fn from_metadata(package: Value) -> BuildResult<DependencySource> {
+        let mut obj = match package {
+            Value::Object(o) => o,
+            _ => err!("metadata package was not a JSON object"),
+        };
+        let id = match obj.remove("id") {
+            Some(Value::String(s)) => s,
+            _ => err!("metadata package did not include key \"id\""),
+        };
+
+        lazy_static! {
+            static ref LOCAL_ID_REGEX: Regex =
+                Regex::new("\\(path\\+file://(.*)\\)$").unwrap();
+            static ref REMOTE_ID_REGEX: Regex =
+                Regex::new("\\(registry\\+https://github.com/rust-lang/crates.io-index\\)$").unwrap();
+        }
+
+        if LOCAL_ID_REGEX.is_match(&id) {
+            let mut path = match obj.remove("manifest_path") {
+                Some(Value::String(s)) => PathBuf::from(s),
+                _ => err!("metadata package did not include key \"manifest_path\""),
+            };
+            path.pop();
+            Ok(DependencySource::Local(path))
+        } else if REMOTE_ID_REGEX.is_match(&id) {
+            let version = match obj.remove("version") {
+                Some(Value::String(s)) => s,
+                _ => err!("metadata package did not include key \"version\""),
+            };
+            Ok(DependencySource::Remote(version))
+        } else {
+            err!("Unsupported source type for {}", id);
+        }
+    }
 }
 
 struct Dependency {

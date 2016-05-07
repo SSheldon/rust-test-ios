@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Steven Sheldon"]
 
 [dependencies]
+lazy_static = "0.2"
 regex = "0.1"
 serde_json = "0.7"
 walkdir = "0.1"
