@@ -193,7 +193,7 @@ fn read_dev_dep(dep: Value) -> BuildResult<Option<String>> {
     };
     match dep_obj.get("kind") {
         Some(&Value::String(ref s)) if s == "dev" => (),
-        None | Some(&Value::String(_)) => return Ok(None),
+        None | Some(&Value::Null) | Some(&Value::String(_)) => return Ok(None),
         Some(v) => err!("Dependency \"kind\" not a string: {:?}", v),
     }
     match dep_obj.remove("name") {
