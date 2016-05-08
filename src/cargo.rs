@@ -163,6 +163,7 @@ fn read_deps_metadata(crate_dir: &Path, dev_deps: Vec<String>)
 
     let out = Command::new("cargo")
         .arg("metadata")
+        .arg("--quiet") // To avoid "Updating registry" message
         .arg("--manifest-path").arg(&crate_dir.join("Cargo.toml"))
         .output();
     let out = try!(out);
