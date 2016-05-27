@@ -1,4 +1,5 @@
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_int};
+use std::panic;
 use super::TESTS;
 
 #[no_mangle]
@@ -14,7 +15,10 @@ pub extern fn test_name(i: usize, len: &mut usize) -> *const c_char {
 }
 
 #[no_mangle]
-pub extern fn run_test(i: usize) {
+pub extern fn run_test(i: usize) -> c_int {
     let (_, test_fn) = TESTS[i];
-    test_fn();
+    let result = panic::catch_unwind(|| {
+        test_fn();
+    });
+    if result.is_ok() { 1 } else { 0 }
 }

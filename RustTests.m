@@ -2,7 +2,7 @@
 
 size_t tests_count();
 const char *test_name(size_t i, size_t *len);
-void run_test(size_t i);
+int run_test(size_t i);
 
 @interface RustTests : XCTestCase
 @end
@@ -16,7 +16,8 @@ void run_test(size_t i);
     NSString *name = [[NSString alloc] initWithBytes:c_name length:name_len encoding:NSUTF8StringEncoding];
 
     NSLog(@"Running test: %@", name);
-    run_test(i);
+    int result = run_test(i);
+    XCTAssert(result != 0, @"Failed %@", name);
   }
 }
 
